@@ -21,12 +21,12 @@ const PORT = process.env.PORT || 3000;
 let notes = [];
 
 let users = [
-    { userName: "user1", password: "123456", auth_key: "" },
-    { userName: "user2", password: "123456", auth_key: "" },
-    { userName: "user3", password: "123456", auth_key: "" },
-    { userName: "user4", password: "123456", auth_key: "" },
-    { userName: "user5", password: "123456", auth_key: "" },
-    { userName: "user6", password: "123456", auth_key: "" },
+    { userName: "user1", password: "123456", auth_key: "zUS5p7adCQrT16oO9gvNnCRwHrkCYSqTSaDr6aFElIciNsnqQdMLIgiIFKg9WZ8Y" },
+    { userName: "user2", password: "123456", auth_key: "Ivgwf4AWmA1SdH7rHc0uVmzKKemXHkmm8jTAqza1uMIUAOGFGz6cJpCKcMVpqjct" },
+    { userName: "user3", password: "123456", auth_key: "a2Q9hlLOAMfXzTtecs8Fx9M2sKUF7VPm8cssJmIBqaFXeQeJT9rcewoTRr1XICEs" },
+    { userName: "user4", password: "123456", auth_key: "8ydiAVjoRO0JcgvdWIRsuQK9Cu06kfcVf98QpbSZN4wgjZMwdMK7cdqisfhbzSrC" },
+    { userName: "user5", password: "123456", auth_key: "tvO2ZIe9f2LESF2QvBPRFWPGelNzztX5C55H6do383fxItXjEUgAjuLgR4DEhvRi" },
+    { userName: "user6", password: "123456", auth_key: "KCO1RLl9hH6k2JUv2Kg4isGMfq8MtT5p1PYXPtHHJGngb0IbtgDfOn8OtX1n2sM7" },
 ];
 
 
@@ -62,12 +62,12 @@ app.post("/login", (req, res) => {
         console.log(password);
 
 
-        const result = authenticateUser(userName, password);
+        const token = authenticateUser(userName, password);
 
 
 
-        if (result) {
-            res.send(result);
+        if (token) {
+            res.send(token);
         } else {
             res.status(401).send("No user present with this userName and Password");
         }
@@ -261,41 +261,23 @@ app.listen(PORT, () => console.log("App is running on port " + PORT));
 
 
 function authenticateUser(userName, password) {
-    const user = users.find(
-        (user) => user.userName === userName && user.password === password
-    );
-
-    const token = generateAuthKey();
-
-    users = users.map(
-        (user) => {
-            if (user.userName == userName) {
-                user.auth_key = token;
-                return user;
-            } else {
-                return user;
-            }
-        }
-    )
-
-    if (user) {
-        return token;
-    }
+    const user = users.find(u => u.userName === userName && u.password === password);
+    return user ? user.auth_key : null;
 }
 
 
 
-function generateAuthKey() {
-    const characters =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    let authKey = "";
-    for (let i = 0; i < 64; i++) {
-        authKey += characters.charAt(
-            Math.floor(Math.random() * characters.length)
-        );
-    }
-    return authKey;
-}
+// function getAuthKey() {
+//     // const characters =
+//     //     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+//     let authKey = "";
+//     // for (let i = 0; i < 64; i++) {
+//     //     authKey += characters.charAt(
+//     //         Math.floor(Math.random() * characters.length)
+//     //     );
+//     // }
+//     return authKey;
+// }
 
 
 
@@ -324,33 +306,24 @@ function validateNoteRequest(req, res, next) {
 
     // Check if all required keys exist
     if (!note.hasOwnProperty("title") || !note.hasOwnProperty("content") || !note.hasOwnProperty("image")) {
-        return res.status(400).send({
-            Success: false,
-            Error: "Missing required fields: 'title', 'content', or 'image'"
-        });
+        return res.status(400).send("Missing required fields: 'title', 'content', or 'image'");
     }
 
     // Validate title and content
     if (!note.title || typeof note.title !== "string" || note.title.trim() === "") {
-        return res.status(400).send({
-            Success: false,
-            Error: "'title' must be a non-empty string"
-        });
+        return res.status(400).send(
+            "'title' must be a non-empty string"
+        );
     }
 
     if (!note.content || typeof note.content !== "string" || note.content.trim() === "") {
-        return res.status(400).send({
-            Success: false,
-            Error: "'content' must be a non-empty string"
-        });
+        return res.status(400).send( "'content' must be a non-empty string"
+        );
     }
 
     // Validate image
     if (note.image !== null && typeof note.image !== "string") {
-        return res.status(400).send({
-            Success: false,
-            Error: "'image' must be either null or a string"
-        });
+        return res.status(400).send( "'image' must be either null or a string");
     }
 
     next(); // Proceed to the next middleware or route handler
