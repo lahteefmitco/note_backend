@@ -97,9 +97,6 @@ router.use((req, res, next) => {
         res.status(401).send("key is not valid");
         return;
     }
-
-
-
     next();
 });
 
@@ -112,18 +109,15 @@ router.get("/getAllNotes", (req, res) => {
         console.log(error);
         res.status(400).send(error.message);
     }
-
 });
 
 router.post("/addNote", validateNoteRequest,(req, res) => {
     try {
-        
-
         const note = req.body;
-
-        note.id = notes.length + 1;
+        const newId = getTheMaxId(notes) + 1
+        note.id = newId;
         notes.push(note);
-        res.status(201).send({ Success: true,id:notes.length });
+        res.status(201).send({id:newId });
 
     } catch (error) {
         console.log(error);
@@ -140,7 +134,7 @@ router.put("/updateNoteWithImage/:id", uploadImage.single('image'),(req, res) =>
         if (!id || isNaN(id) || !Number.isInteger(Number(id))) {
 
             // delete uploaded image
-            return res.status(400).send({ Success: false, Error: "'id' must be an integer and must exist" });
+            return res.status(400).send("'id' must be an integer and must exist" );
         } 
         
 
@@ -151,7 +145,7 @@ router.put("/updateNoteWithImage/:id", uploadImage.single('image'),(req, res) =>
         const noteIndex = notes.findIndex((obj) => obj.id === noteId);
         if (noteIndex === -1) {
              // delete uploaded image
-            return res.status(401).send({ Success: false, Error: "Note with the given 'id' does not exist" });
+            return res.status(400).send("Note with the given 'id' does not exist" );
         }
 
         const fileName = req.file.filename;
@@ -182,7 +176,7 @@ router.put("/updateNote/:id", validateNoteRequest,(req, res) => {
         
         // Check if the parameter exists and is an integer
         if (!id || isNaN(id) || !Number.isInteger(Number(id))) {
-            return res.status(400).send({ Success: false, Error: "'id' must be an integer and must exist" });
+            return res.status(400).send("'id' must be an integer and must exist" );
         } 
 
         
@@ -192,7 +186,7 @@ router.put("/updateNote/:id", validateNoteRequest,(req, res) => {
          // Check if the note exists in the list
          const noteIndex = notes.findIndex((obj) => obj.id === noteId);
          if (noteIndex === -1) {
-             return res.status(401).send({ Success: false, Error: "Note with the given 'id' does not exist" });
+             return res.status(400).send("Note with the given 'id' does not exist" );
          }
 
          // if image is null
@@ -228,7 +222,7 @@ router.delete("/deleteNote/:id",(req, res) => {
 
         // Check if the parameter exists and is an integer
         if (!id || isNaN(id) || !Number.isInteger(Number(id))) {
-            return res.status(400).send({ Success: false, Error: "'id' must be an integer and must exist" });
+            return res.status(400).send( "'id' must be an integer and must exist" );
         } 
         
 
@@ -237,7 +231,7 @@ router.delete("/deleteNote/:id",(req, res) => {
         // Check if the note exists in the list
         const noteIndex = notes.findIndex((obj) => obj.id === noteId);
         if (noteIndex === -1) {
-            return res.status(401).send({ Success: false, Error: "Note with the given 'id' does not exist" });
+            return res.status(401).send( "Note with the given 'id' does not exist" );
         }
 
         const noteToDelete = (notes.filter(obj => obj.id === noteId))[0];
@@ -245,6 +239,7 @@ router.delete("/deleteNote/:id",(req, res) => {
         notes = notes.filter(obj => obj.id !== noteId);
 
         // delete image
+        
         deleteImage(noteToDelete.image);
 
         res.send(notes);
@@ -363,6 +358,10 @@ function validateNoteRequest(req, res, next) {
 
 function deleteImage(filename) {
 
+    if(!filename){
+        return;
+    }
+
     const filePath = path.join(__dirname, "images", filename);
 
     try {
@@ -379,4 +378,12 @@ function deleteImage(filename) {
        
     }
     
+}
+
+
+function getTheMaxId(list){
+    const maxId = list.reduce((max, item) => item.id > max ? item.id : max, 0);
+
+    console.log("Maximum ID:", maxId);
+    return maxId;
 }
