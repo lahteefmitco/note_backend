@@ -1,15 +1,21 @@
 const express = require("express");
+const supabase = require('./supabaseClient')
 
 const { initializeApp } = require("firebase/app");
 const cors = require("cors");
 const multer = require("multer");
 const path = require('path');
 const fs = require("fs");
+
 require('dotenv').config();
 
 
 
-const { getFirestore, collection, addDoc, getDocs, updateDoc, setDoc, Timestamp, doc, getDoc,deleteDoc } = require("firebase/firestore");
+const { getFirestore, collection, addDoc, getDocs, updateDoc, setDoc, Timestamp, doc, getDoc, deleteDoc } = require("firebase/firestore");
+
+
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 
 
@@ -73,21 +79,40 @@ app.get("/getAllUsers", (req, res) => {
 });
 
 
-
-
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, 'images/');
-    },
-    filename: function (req, file, cb) {
-        const uniqueSuffix = Date.now(); // Add a unique timestamp
-        const extension = path.extname(file.originalname); // Extract file extension
-        cb(null, file.fieldname + '-' + uniqueSuffix + extension);
+app.delete('/delete/:fileName', async (req, res) => {
+    const { fileName } = req.params;
+  
+    try {
+      const { error } = await supabase.storage.from('sample').remove([fileName]);
+  
+      if (error) throw error;
+  
+      res.status(200).json({ message: 'File deleted successfully' });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
     }
-});
+  });
 
-// Initialize Multer with Storage
-const uploadImage = multer({ storage: storage });
+
+
+
+
+
+
+
+// const storage = multer.diskStorage({
+//     destination: function (req, file, cb) {
+//         cb(null, 'images/');
+//     },
+//     filename: function (req, file, cb) {
+//         const uniqueSuffix = Date.now(); // Add a unique timestamp
+//         const extension = path.extname(file.originalname); // Extract file extension
+//         cb(null, file.fieldname + '-' + uniqueSuffix + extension);
+//     }
+// });
+
+// // Initialize Multer with Storage
+// const uploadImage = multer({ storage: storage });
 
 
 
@@ -147,46 +172,46 @@ router.use((req, res, next) => {
 
 
 
-router.get("/getAllNotes", async(req, res) => {
+router.get("/getAllNotes", async (req, res) => {
     try {
         const userName = req.headers["userName"];
         const querySnapshot = await getDocs(collection(db, userName.toString()));
         const noteList = [];
 
         querySnapshot.forEach((doc) => {
-            
+
             const documentId = doc.id;
             const rDoc = doc.data();
             rDoc.documentId = documentId;
             const timeStamp = rDoc.dateTime;
-           // console.log(timeStamp);
+            // console.log(timeStamp);
 
-           
-            
+
+
             const datetimeString = timeStamp.toDate();
-            
+
 
             rDoc.dateTime = datetimeString;
-            
+
             //console.log(doc.id, " => ", doc.data());
             noteList.push(rDoc);
         });
         res.send(noteList);
 
-        
+
     } catch (error) {
         console.log(error);
         res.status(400).send(error.message);
     }
 });
 
-router.post("/addNote", validateNoteRequest, async(req, res) => {
+router.post("/addNote", validateNoteRequest, async (req, res) => {
     try {
         const userName = req.headers["userName"];
 
         const note = req.body;
 
-        
+
         // Add note to firebase
         const docRef = await addDoc(collection(db, userName.toString()), note);
         res.status(201).json({ id: docRef.id, message: "Note added successfully!" });
@@ -198,75 +223,75 @@ router.post("/addNote", validateNoteRequest, async(req, res) => {
 
 });
 
-router.put("/updateNoteWithImage/:documentId", uploadImage.single('image'), (req, res) => {
+// router.put("/updateNoteWithImage/:documentId", uploadImage.single('image'), (req, res) => {
+//     try {
+//         const { id } = req.params;
+
+//         // Check if the parameter exists and is an integer
+//         if (!id || isNaN(id) || !Number.isInteger(Number(id))) {
+
+//             // delete uploaded image
+//             return res.status(400).send("'id' must be an integer and must exist");
+//         }
+
+
+//         const noteId = parseInt(id);
+
+
+//         // Check if the note exists in the list
+//         const noteIndex = notes.findIndex((obj) => obj.id === noteId);
+//         if (noteIndex === -1) {
+//             // delete uploaded image
+//             return res.status(400).send("Note with the given 'id' does not exist");
+//         }
+
+//         const fileName = req.file.filename;
+
+
+
+//         notes = notes.map((obj) => {
+//             if (obj.id === noteId) { // Compare with id as an integer
+//                 obj.image = fileName // Update the object with new data
+//             }
+//             return obj;
+//         });
+
+//         res.send(fileName);
+
+//     } catch (error) {
+//         console.log(error);
+//         res.status(400).send(error.message);
+//     }
+
+// });
+
+router.put("/updateNote/:documentId", validateNoteRequest, async (req, res) => {
     try {
-        const { id } = req.params;
 
-        // Check if the parameter exists and is an integer
-        if (!id || isNaN(id) || !Number.isInteger(Number(id))) {
-
-            // delete uploaded image
-            return res.status(400).send("'id' must be an integer and must exist");
-        }
-
-
-        const noteId = parseInt(id);
-
-
-        // Check if the note exists in the list
-        const noteIndex = notes.findIndex((obj) => obj.id === noteId);
-        if (noteIndex === -1) {
-            // delete uploaded image
-            return res.status(400).send("Note with the given 'id' does not exist");
-        }
-
-        const fileName = req.file.filename;
-
-
-
-        notes = notes.map((obj) => {
-            if (obj.id === noteId) { // Compare with id as an integer
-                obj.image = fileName // Update the object with new data
-            }
-            return obj;
-        });
-
-        res.send(fileName);
-
-    } catch (error) {
-        console.log(error);
-        res.status(400).send(error.message);
-    }
-
-});
-
-router.put("/updateNote/:documentId", validateNoteRequest, async(req, res) => {
-    try {
-        
         const note = req.body;
 
-        
+
         console.log(note);
 
         const documentId = req.params["documentId"];
         console.log(documentId);
-        
+
 
         const userName = req.headers["userName"];
 
         console.log(userName);
-        
 
-        const noteDocRef = doc(db,userName,documentId)
+
+        const noteDocRef = doc(db, userName, documentId)
 
         console.log("noteDocRef completed");
-        
 
-        await updateDoc(noteDocRef,{
-            title:note.title,
-            content:note.content,
-            dateTime:note.dateTime,
-            isFavourite:note.isFavourite,
+
+        await updateDoc(noteDocRef, {
+            title: note.title,
+            content: note.content,
+            dateTime: note.dateTime,
+            isFavourite: note.isFavourite,
 
         })
 
@@ -278,20 +303,20 @@ router.put("/updateNote/:documentId", validateNoteRequest, async(req, res) => {
         console.log("docSnapShot");
 
 
-        if(docSnapShot.exists()){
-            const  doc = docSnapShot.data();
+        if (docSnapShot.exists()) {
+            const doc = docSnapShot.data();
 
             const timeStamp = doc.dateTime;
             const newDatetime = timeStamp.toDate();
 
             doc.dateTime = newDatetime;
             doc.documentId = documentId;
-            
+
             return res.send(doc);
-        }else{
+        } else {
             return res.status(400).send("There have some problem getting updated data");
         }
-        
+
 
     } catch (error) {
         console.log(error);
@@ -300,33 +325,33 @@ router.put("/updateNote/:documentId", validateNoteRequest, async(req, res) => {
 
 });
 
-router.patch("/updateFavourite/:documentId",async(req,res)=>{
+router.patch("/updateFavourite/:documentId", async (req, res) => {
     try {
         const userName = req.headers["userName"];
         const documentId = req.params["documentId"];
         const data = req.body;
 
         console.log(data);
-        
-        
 
-        if(!data||!data.hasOwnProperty("isFavourite") || typeof data.isFavourite!=="boolean"){
+
+
+        if (!data || !data.hasOwnProperty("isFavourite") || typeof data.isFavourite !== "boolean") {
             return res.status(400).send("no body or body is not okay")
         }
 
         console.log("sdsdsd");
-        
 
-        const noteDocRef = doc(db,userName,documentId)
+
+        const noteDocRef = doc(db, userName, documentId)
 
         const docSnapShotBeforeUpdate = await getDoc(noteDocRef);
-        if(!docSnapShotBeforeUpdate.exists()){
+        if (!docSnapShotBeforeUpdate.exists()) {
             return res.status(400).send("No document to update");
         }
 
-        await updateDoc(noteDocRef,{
-            
-            isFavourite:data.isFavourite,
+        await updateDoc(noteDocRef, {
+
+            isFavourite: data.isFavourite,
 
         })
 
@@ -338,17 +363,17 @@ router.patch("/updateFavourite/:documentId",async(req,res)=>{
         console.log("docSnapShot");
 
 
-        if(docSnapShot.exists()){
-            const  doc = docSnapShot.data();
+        if (docSnapShot.exists()) {
+            const doc = docSnapShot.data();
 
             const timeStamp = doc.dateTime;
             const newDatetime = timeStamp.toDate();
 
             doc.dateTime = newDatetime;
             doc.documentId = documentId;
-            
+
             return res.send(doc);
-        }else{
+        } else {
             return res.status(400).send("There have some problem getting updated data");
         }
 
@@ -358,39 +383,46 @@ router.patch("/updateFavourite/:documentId",async(req,res)=>{
     }
 })
 
-router.delete("/deleteNote/:documentId", async(req, res) => {
+router.delete("/deleteNote/:documentId", async (req, res) => {
     try {
         const { documentId } = req.params;
         console.log(documentId);
-        
+
         const userName = req.headers["userName"];
 
         console.log(userName);
 
         const noteDocRef = doc(db, userName, documentId)
         console.log("noteDocRef completed");
-        
+
         const docSnapShot = await getDoc(noteDocRef);
 
         console.log("noteDocRef completed");
 
-        if(docSnapShot.exists()){
+        if (docSnapShot.exists()) {
+            const imageUrl = docSnapShot.data().image
             await deleteDoc(noteDocRef);
-        }else{
-           return res.status(400).send("No document with this id");
-        }
-        
+            if(imageUrl!==null){
+                const imageFileName = imageUrl.split('/').pop();
+                const { error } = await supabase.storage.from('sample').remove([imageFileName]);
+            }
+            
 
-        
+        } else {
+            return res.status(400).send("No document with this id");
+        }
+
+
+
 
 
         res.send({
-            message:"document deleted",
+            message: "document deleted",
         });
 
 
 
-       
+
 
     } catch (error) {
         console.log(error);
@@ -400,49 +432,95 @@ router.delete("/deleteNote/:documentId", async(req, res) => {
 });
 
 
-router.get("/search",async(req,res)=>{
+router.get("/search", async (req, res) => {
     try {
         const userName = req.headers["userName"];
         console.log(userName);
-        
+
         const keyword = req.query["searchText"];
         console.log(keyword);
 
         const querySnapshot = await getDocs(collection(db, userName.toString()));
-        
+
 
         const noteList = [];
 
         querySnapshot.forEach((doc) => {
-            
+
             const documentId = doc.id;
             const rDoc = doc.data();
             rDoc.documentId = documentId;
             const timeStamp = rDoc.dateTime;
-           // console.log(timeStamp);
+            // console.log(timeStamp);
 
-           
-            
+
+
             const datetimeString = timeStamp.toDate();
-            
+
 
             rDoc.dateTime = datetimeString;
-            
+
             //console.log(doc.id, " => ", doc.data());
             noteList.push(rDoc);
         });
 
-        const filteredList = noteList.filter((note)=>(note.title && note.title.toLowerCase().includes(keyword)) || 
-        (note.content && note.content.toLowerCase().includes(keyword)))
+        const filteredList = noteList.filter((note) => (note.title && note.title.toLowerCase().includes(keyword)) ||
+            (note.content && note.content.toLowerCase().includes(keyword)))
 
         res.send(filteredList);
-        
-        
+
+
     } catch (error) {
         console.log(error);
         res.status(400).send(error.message);
     }
 })
+
+router.post('/uploadImage/:documentId', upload.single('file'), async (req, res) => {
+    const { file } = req;
+    if (!file) {
+        return res.status(400).send('No file uploaded');
+    }
+
+    console.log(file.originalname);
+
+    const userName = req.headers["userName"];
+    const documentId = req.params["documentId"];
+
+
+    try {
+        const fileName = `${Date.now()}_${file.originalname}`; // Generate a unique filename
+
+        // Upload the file buffer directly to Supabase
+        const { data, error } = await supabase.storage
+            .from('sample')
+            .upload(fileName, file.buffer, {
+                contentType: file.mimetype,
+                upsert: false, // Set to true if you want to overwrite files with the same name
+            });
+
+        if (error) throw error;
+
+
+        const noteDocRef = doc(db, userName, documentId)
+
+        const docSnapShotBeforeUpdate = await getDoc(noteDocRef);
+        if (!docSnapShotBeforeUpdate.exists()) {
+            return res.status(400).send("No  firebase document to update");
+        }
+
+        await updateDoc(noteDocRef, {
+
+            image: `https://axnturdhhmqwgyaldekj.supabase.co/storage/v1/object/public/sample/${fileName}`,
+
+        })
+
+
+        res.status(200).json({ message: 'File uploaded successfully', url: `https://axnturdhhmqwgyaldekj.supabase.co/storage/v1/object/public/oxdo/${fileName}` });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
 
 app.use("/note", router);
@@ -497,10 +575,10 @@ function checkUserAuthKey(auth_key) {
 function validateNoteRequest(req, res, next) {
     const note = req.body;
 
-    if(req.method == "PUT"){
-        const  documentId  = req.params["documentId"];
-            // Check document is equal in path parameter and body
-        if(note.documentId!==documentId){
+    if (req.method == "PUT") {
+        const documentId = req.params["documentId"];
+        // Check document is equal in path parameter and body
+        if (note.documentId !== documentId) {
             return res.status(400).send("'documentId' in body and path parameters are not equal");
         }
     }
@@ -541,15 +619,15 @@ function validateNoteRequest(req, res, next) {
 
     note.dateTime = firestoreTimestamp;
 
-    
+
 
     // validate favourite
-    if ( typeof note.isFavourite !== "boolean") {
+    if (typeof note.isFavourite !== "boolean") {
         return res.status(400).send("'isFavourite' is not included or not a boolean");
     }
 
     // if document id is present need to delete it
-    if("documentId" in note){
+    if ("documentId" in note) {
         delete note.documentId;
     }
 
@@ -557,57 +635,57 @@ function validateNoteRequest(req, res, next) {
 
     req.body = filteredNote;
 
-   
+
 
     next(); // Proceed to the next middleware or route handler
 }
 
-function deleteImage(filename) {
+// function deleteImage(filename) {
 
-    if (!filename) {
-        return;
-    }
+//     if (!filename) {
+//         return;
+//     }
 
-    const filePath = path.join(__dirname, "images", filename);
+//     const filePath = path.join(__dirname, "images", filename);
 
-    try {
-        // Check if the file exists
-        if (!fs.existsSync(filePath)) {
-            return;
-        }
+//     try {
+//         // Check if the file exists
+//         if (!fs.existsSync(filePath)) {
+//             return;
+//         }
 
-        // Delete the file
-        fs.unlinkSync(filePath);
+//         // Delete the file
+//         fs.unlinkSync(filePath);
 
-    } catch (error) {
-        console.error("Error deleting file:", error);
+//     } catch (error) {
+//         console.error("Error deleting file:", error);
 
-    }
+//     }
 
-}
+// }
 
 
-function getTheMaxId(list) {
-    const maxId = list.reduce((max, item) => item.id > max ? item.id : max, 0);
+// function getTheMaxId(list) {
+//     const maxId = list.reduce((max, item) => item.id > max ? item.id : max, 0);
 
-    console.log("Maximum ID:", maxId);
-    return maxId;
-}
+//     console.log("Maximum ID:", maxId);
+//     return maxId;
+// }
 
-function validateUserId(req, res, next) {
-    const userId = req.params["userId"];
+// function validateUserId(req, res, next) {
+//     const userId = req.params["userId"];
 
-}
+// }
 
 
 function filterReceivedNote(input) {
     const allowedKeys = ["documentId", "title", "content", "image", "dateTime", "isFavourite"];
     // Create a new object with only allowed keys
-  const filteredObject = {};
-  for (const key of allowedKeys) {
-    if (key in input) {
-      filteredObject[key] = input[key];
+    const filteredObject = {};
+    for (const key of allowedKeys) {
+        if (key in input) {
+            filteredObject[key] = input[key];
+        }
     }
-  }
-  return filteredObject;
+    return filteredObject;
 }
