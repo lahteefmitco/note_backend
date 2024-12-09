@@ -51,14 +51,6 @@ const PORT = process.env.PORT || 3000;
 
 
 
-let notes = [
-    { userId: 1, data: [] },
-    { userId: 2, data: [] },
-    { userId: 3, data: [] },
-    { userId: 4, data: [] },
-    { userId: 5, data: [] },
-    { userId: 6, data: [] },
-];
 
 let users = [
     { userId: 1, userName: "user1", password: "123456", auth_key: "zUS5p7adCQrT16oO9gvNnCRwHrkCYSqTSaDr6aFElIciNsnqQdMLIgiIFKg9WZ8Y" },
@@ -79,19 +71,19 @@ app.get("/getAllUsers", (req, res) => {
 });
 
 
-app.delete('/delete/:fileName', async (req, res) => {
-    const { fileName } = req.params;
+// app.delete('/delete/:fileName', async (req, res) => {
+//     const { fileName } = req.params;
   
-    try {
-      const { error } = await supabase.storage.from('sample').remove([fileName]);
+//     try {
+//       const { error } = await supabase.storage.from('sample').remove([fileName]);
   
-      if (error) throw error;
+//       if (error) throw error;
   
-      res.status(200).json({ message: 'File deleted successfully' });
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
-  });
+//       res.status(200).json({ message: 'File deleted successfully' });
+//     } catch (err) {
+//       res.status(500).json({ error: err.message });
+//     }
+//   });
 
 
 
@@ -120,6 +112,11 @@ app.delete('/delete/:fileName', async (req, res) => {
 app.post("/login", (req, res) => {
     try {
         const { userName, password } = req.body;
+        const key = req.headers["owner"];
+
+        if(!key || key !=="oxdo"){
+            return res.status(401).send("Authentication failed");
+        }
 
         console.log(userName);
         console.log(password);
@@ -130,7 +127,7 @@ app.post("/login", (req, res) => {
 
 
         if (token) {
-            res.send(token);
+            res.send({token:token});
         } else {
             res.status(401).send("No user present with this userName and Password");
         }
@@ -138,7 +135,7 @@ app.post("/login", (req, res) => {
 
 
     } catch (error) {
-        console.log(error);
+        con1sole.log(error);
         res.status(400).send(error);
     }
 })
@@ -214,7 +211,7 @@ router.post("/addNote", validateNoteRequest, async (req, res) => {
 
         // Add note to firebase
         const docRef = await addDoc(collection(db, userName.toString()), note);
-        res.status(201).json({ id: docRef.id, message: "Note added successfully!" });
+        res.status(201).json({ documentId: docRef.id, message: "Note added successfully!" });
 
     } catch (error) {
         console.log(error);
@@ -464,8 +461,8 @@ router.get("/search", async (req, res) => {
             noteList.push(rDoc);
         });
 
-        const filteredList = noteList.filter((note) => (note.title && note.title.toLowerCase().includes(keyword)) ||
-            (note.content && note.content.toLowerCase().includes(keyword)))
+        const filteredList = noteList.filter((note) => (note.title && note.title.toLowerCase().includes(keyword.toLowerCase())) ||
+            (note.content && note.content.toLowerCase().includes(keyword.toLowerCase())))
 
         res.send(filteredList);
 
@@ -476,7 +473,7 @@ router.get("/search", async (req, res) => {
     }
 })
 
-router.post('/uploadImage/:documentId', upload.single('file'), async (req, res) => {
+router.post('/uploadImage/:documentId', upload.single('image'), async (req, res) => {
     const { file } = req;
     if (!file) {
         return res.status(400).send('No file uploaded');
@@ -516,7 +513,7 @@ router.post('/uploadImage/:documentId', upload.single('file'), async (req, res) 
         })
 
 
-        res.status(200).json({ message: 'File uploaded successfully', url: `https://axnturdhhmqwgyaldekj.supabase.co/storage/v1/object/public/oxdo/${fileName}` });
+        res.status(200).json({ message: 'File uploaded successfully', imageUrl: `https://axnturdhhmqwgyaldekj.supabase.co/storage/v1/object/public/oxdo/${fileName}` });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
