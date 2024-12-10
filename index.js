@@ -71,19 +71,19 @@ app.get("/getAllUsers", (req, res) => {
 });
 
 
-// app.delete('/delete/:fileName', async (req, res) => {
-//     const { fileName } = req.params;
-  
-//     try {
-//       const { error } = await supabase.storage.from('sample').remove([fileName]);
-  
-//       if (error) throw error;
-  
-//       res.status(200).json({ message: 'File deleted successfully' });
-//     } catch (err) {
-//       res.status(500).json({ error: err.message });
-//     }
-//   });
+app.delete('/delete/:fileName', async (req, res) => {
+    const { fileName } = req.params;
+
+    try {
+        const { error } = await supabase.storage.from('sample').remove([fileName]);
+
+        if (error) throw error;
+
+        res.status(200).json({ message: 'File deleted successfully' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
 
 
@@ -114,7 +114,7 @@ app.post("/login", (req, res) => {
         const { userName, password } = req.body;
         const key = req.headers["owner"];
 
-        if(!key || key !=="oxdo"){
+        if (!key || key !== "oxdo") {
             return res.status(401).send("Authentication failed");
         }
 
@@ -127,7 +127,7 @@ app.post("/login", (req, res) => {
 
 
         if (token) {
-            res.send({token:token});
+            res.send({ token: token });
         } else {
             res.status(401).send("No user present with this userName and Password");
         }
@@ -399,11 +399,11 @@ router.delete("/deleteNote/:documentId", async (req, res) => {
         if (docSnapShot.exists()) {
             const imageUrl = docSnapShot.data().image
             await deleteDoc(noteDocRef);
-            if(imageUrl!==null){
+            if (imageUrl !== null) {
                 const imageFileName = imageUrl.split('/').pop();
                 const { error } = await supabase.storage.from('sample').remove([imageFileName]);
             }
-            
+
 
         } else {
             return res.status(400).send("No document with this id");
@@ -519,6 +519,53 @@ router.post('/uploadImage/:documentId', upload.single('image'), async (req, res)
     }
 });
 
+router.delete('/deleteImage/:documentId', async (req, res) => {
+    const { documentId} = req.params;
+    
+
+    console.log(documentId);
+    
+
+
+
+
+
+    try {
+        
+
+        const userName = req.headers["userName"];
+
+
+
+        const noteDocRef = doc(db, userName, documentId)
+
+        const docSnapShotBeforeUpdate = await getDoc(noteDocRef);
+        if (!docSnapShotBeforeUpdate.exists()) {
+            return res.status(400).send("No  firebase document to delete image");
+        }
+
+        const imageUrlInDocument = docSnapShotBeforeUpdate.data().image
+
+        
+
+        const imageFileName = imageUrlInDocument.split('/').pop();
+        const { error } = await supabase.storage.from('sample').remove([imageFileName]);
+
+        if(error) throw error;
+
+
+        await updateDoc(noteDocRef, {
+
+            image: null,
+
+        })
+
+
+        res.status(200).json({ message: 'Image deleted successfully' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
 app.use("/note", router);
 
